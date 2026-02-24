@@ -1,49 +1,96 @@
 # Solflux Evolution MVP
 
-An on-chain evolving NFT identity engine built on Solana using Anchor.
+**Evolving NFT Financial Identity Protocol on Solana (Anchor-based)**
 
-## 🧠 Overview
+Solflux transforms NFTs from static collectibles into dynamic, evolving financial identities.
 
-Solflux Evolution MVP is a smart contract that allows NFTs to:
-
-- Mint with initial level and XP
-- Be staked
-- Accumulate XP
-- Automatically level up after reaching XP thresholds
-
-This project demonstrates on-chain state management, staking logic, and dynamic NFT progression mechanics.
+This MVP demonstrates how NFTs can gain XP, level up, and evolve through marketplace-controlled staking logic — fully on-chain.
 
 ---
 
-## ⚙️ Built With
+## 🚀 MVP Features
 
-- Solana
-- Anchor Framework
+- ✅ Mint NFT (program-controlled)
+- ✅ Initialize Marketplace (PDA)
+- ✅ Stake NFT via Marketplace
+- ✅ On-chain XP accumulation
+- ✅ Automatic level-up after XP threshold
+- ✅ Anchor test coverage (all passing)
+
+---
+
+## 🧠 Core Idea
+
+Traditional NFTs are static.
+
+Solflux NFTs are dynamic:
+
+- They earn XP
+- They level up
+- They evolve over time
+- They are designed to represent financial identity on-chain
+
+This MVP introduces the foundational evolution mechanics.
+
+---
+
+## 🏗 Architecture
+
+Built using:
+
 - Rust
-- TypeScript (Anchor Tests)
+- Anchor Framework
+- Solana
+- TypeScript (Tests)
+
+### Program Structure
+
+```
+programs/
+ └── solflux_evolution_mvp/
+      └── src/
+           └── lib.rs
+```
 
 ---
 
-## 🔥 Features
+## ⚙️ Protocol Flow
 
-- ✅ Mint NFT with owner + level state
-- ✅ Stake NFT
-- ✅ Add XP via evolve instruction
-- ✅ Auto level-up after 100 XP
-- ✅ Full test suite passing
-- ✅ Local validator deployment working
+1. User mints NFT  
+2. Marketplace PDA is initialized  
+3. User stakes NFT inside marketplace  
+4. User calls `evolve()`  
+5. XP increases  
+6. After 100 XP → Level increases  
 
 ---
 
-## 🧪 Test Results
+## 🧪 Test Coverage
 
-All tests passing:
+The following flows are tested:
 
 - Mint NFT
 - Stake NFT
 - Evolve NFT (adds XP)
-- Level up after 10 evolves
+- Level up after 10 evolves (100 XP)
+
+All tests passing ✅
 
 ---
 
-## 📂 Project Structure
+## 🔮 Roadmap
+
+- Escrow-based marketplace
+- NFT trading inside protocol
+- Reward token integration
+- On-chain reputation scoring
+- DeFi composability layer
+
+---
+
+## 🌊 Vision
+
+Solflux aims to build programmable financial identities on Solana.
+
+NFTs should not just represent art —  
+they should represent financial behavior, credibility, and evolution.
