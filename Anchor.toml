@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-solflux_evolution_mvp = "5X7XK9nGW9DGt7URsdihdnmDevWQAbpoU2rrDn4oLnX1"
+solflux_evolution_mvp = "2amQivXBjXgNUdh9VBSBtxcQnAjnZiYjf29WU9QhxJ9H"
 
 [registry]
 url = "https://api.apr.dev"
