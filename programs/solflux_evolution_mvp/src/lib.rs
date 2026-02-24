@@ -6,6 +6,18 @@ declare_id!("2amQivXBjXgNUdh9VBSBtxcQnAjnZiYjf29WU9QhxJ9H");
 pub mod solflux_evolution_mvp {
     use super::*;
 
+    // --------------------------------
+    // 1️⃣ Initialize Marketplace PDA
+    // --------------------------------
+    pub fn initialize_marketplace(ctx: Context<InitializeMarketplace>) -> Result<()> {
+        let marketplace = &mut ctx.accounts.marketplace;
+        marketplace.authority = ctx.accounts.authority.key();
+        Ok(())
+    }
+
+    // --------------------------------
+    // 2️⃣ Mint NFT
+    // --------------------------------
     pub fn mint_nft(ctx: Context<MintNFT>) -> Result<()> {
         let nft = &mut ctx.accounts.nft_account;
 
@@ -17,20 +29,35 @@ pub mod solflux_evolution_mvp {
         Ok(())
     }
 
-    pub fn stake_nft(ctx: Context<StakeNFT>) -> Result<()> {
+    // --------------------------------
+    // 3️⃣ Stake via Marketplace
+    // --------------------------------
+    pub fn stake_via_marketplace(ctx: Context<StakeViaMarketplace>) -> Result<()> {
         let nft = &mut ctx.accounts.nft_account;
 
-        require_keys_eq!(nft.owner, ctx.accounts.user.key(), CustomError::InvalidOwner);
+        require_keys_eq!(
+            nft.owner,
+            ctx.accounts.user.key(),
+            CustomError::InvalidOwner
+        );
 
         nft.staked = true;
 
         Ok(())
     }
 
+    // --------------------------------
+    // 4️⃣ Evolve NFT
+    // --------------------------------
     pub fn evolve_nft(ctx: Context<EvolveNFT>) -> Result<()> {
         let nft = &mut ctx.accounts.nft_account;
 
-        require_keys_eq!(nft.owner, ctx.accounts.user.key(), CustomError::InvalidOwner);
+        require_keys_eq!(
+            nft.owner,
+            ctx.accounts.user.key(),
+            CustomError::InvalidOwner
+        );
+
         require!(nft.staked, CustomError::NotStaked);
 
         nft.xp += 10;
@@ -42,6 +69,27 @@ pub mod solflux_evolution_mvp {
 
         Ok(())
     }
+}
+
+// =====================================================
+// Accounts
+// =====================================================
+
+#[derive(Accounts)]
+pub struct InitializeMarketplace<'info> {
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + 32,
+        seeds = [b"marketplace"],
+        bump
+    )]
+    pub marketplace: Account<'info, Marketplace>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -60,9 +108,15 @@ pub struct MintNFT<'info> {
 }
 
 #[derive(Accounts)]
-pub struct StakeNFT<'info> {
+pub struct StakeViaMarketplace<'info> {
     #[account(mut)]
     pub nft_account: Account<'info, SolfluxNFT>,
+
+    #[account(
+        seeds = [b"marketplace"],
+        bump
+    )]
+    pub marketplace: Account<'info, Marketplace>,
 
     pub user: Signer<'info>,
 }
@@ -75,6 +129,15 @@ pub struct EvolveNFT<'info> {
     pub user: Signer<'info>,
 }
 
+// =====================================================
+// State
+// =====================================================
+
+#[account]
+pub struct Marketplace {
+    pub authority: Pubkey,
+}
+
 #[account]
 pub struct SolfluxNFT {
     pub owner: Pubkey,
@@ -82,6 +145,10 @@ pub struct SolfluxNFT {
     pub xp: u64,
     pub staked: bool,
 }
+
+// =====================================================
+// Errors
+// =====================================================
 
 #[error_code]
 pub enum CustomError {
