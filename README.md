@@ -92,5 +92,5 @@ All tests passing ✅
 
 Solflux aims to build programmable financial identities on Solana.
 
-NFTs should not just represent art —  
+NFTs should not just represent art 
 they should represent financial behavior, credibility, and evolution.
