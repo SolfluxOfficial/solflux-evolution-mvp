@@ -1,87 +1,133 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
+import { PublicKey } from "@solana/web3.js";
 import { SolfluxEvolutionMvp } from "../target/types/solflux_evolution_mvp";
-import { expect } from "chai";
 
-describe("solflux_evolution_mvp", () => {
+import {
+  getAssociatedTokenAddress,
+  getAccount,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+
+import { assert } from "chai";
+
+const PROGRAM_ID = new PublicKey("5nonF1D2LWwmu3j4GrYH2F6ygnPmWUiPb4Lc1KGiyVij");
+
+describe("Solflux MVP flow (marketplace → mint → stake → unstake)", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace
-    .SolfluxEvolutionMvp as Program<SolfluxEvolutionMvp>;
+  // 👇 explicitly using program id (more reliable than workspace sometimes)
+  const program = new Program<SolfluxEvolutionMvp>(
+    require("../target/idl/solflux_evolution_mvp.json"),
+    PROGRAM_ID,
+    provider
+  );
 
-  const user = provider.wallet;
+  const wallet = provider.wallet;
 
-  const nftAccount = anchor.web3.Keypair.generate();
+  let marketplace: anchor.web3.PublicKey;
+  let nftAcc: anchor.web3.Keypair;
+  let mintKey: anchor.web3.Keypair;
 
-  it("Mints NFT", async () => {
+  let userTokenAcc: anchor.web3.PublicKey;
+  let vaultTokenAcc: anchor.web3.PublicKey;
+  let vaultAuth: anchor.web3.PublicKey;
+
+  it("runs complete NFT lifecycle without breaking anything", async () => {
+    // ---- Step 1: Marketplace setup ----
+    marketplace = anchor.web3.Keypair.generate().publicKey;
+
+    await program.methods
+      .initializeMarketplace()
+      .accounts({
+        marketplace,
+        authority: wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
+    // ---- Step 2: Mint NFT ----
+    nftAcc = anchor.web3.Keypair.generate();
+    mintKey = anchor.web3.Keypair.generate();
+
+    const [mintAuth] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("mint")],
+      program.programId
+    );
+
+    userTokenAcc = await getAssociatedTokenAddress(
+      mintKey.publicKey,
+      wallet.publicKey
+    );
+
     await program.methods
       .mintNft()
       .accounts({
-        nftAccount: nftAccount.publicKey,
-        user: user.publicKey,
+        nftAccount: nftAcc.publicKey,
+        mint: mintKey.publicKey,
+        userTokenAccount: userTokenAcc,
+        mintAuthority: mintAuth,
+        user: wallet.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         systemProgram: anchor.web3.SystemProgram.programId,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       })
-      .signers([nftAccount])
+      .signers([nftAcc, mintKey])
       .rpc();
 
-    const account = await program.account.solfluxNft.fetch(
-      nftAccount.publicKey
+    let userBal = await getAccount(provider.connection, userTokenAcc);
+    assert.equal(Number(userBal.amount), 1, "NFT mint failed");
+
+    // ---- Step 3: Stake NFT ----
+    [vaultAuth] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("vault"), nftAcc.publicKey.toBuffer()],
+      program.programId
     );
 
-    expect(account.level).to.equal(1);
-    expect(account.xp.toNumber()).to.equal(0);
-    expect(account.staked).to.equal(false);
-  });
+    vaultTokenAcc = await getAssociatedTokenAddress(
+      mintKey.publicKey,
+      vaultAuth,
+      true
+    );
 
-  it("Stakes NFT", async () => {
     await program.methods
       .stakeNft()
       .accounts({
-        nftAccount: nftAccount.publicKey,
-        user: user.publicKey,
+        nftAccount: nftAcc.publicKey,
+        user: wallet.publicKey,
+        userTokenAccount: userTokenAcc,
+        vaultTokenAccount: vaultTokenAcc,
+        mint: mintKey.publicKey,
+        vaultAuthority: vaultAuth,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .rpc();
 
-    const account = await program.account.solfluxNft.fetch(
-      nftAccount.publicKey
-    );
+    const afterStakeUser = await getAccount(provider.connection, userTokenAcc);
+    const vaultState = await getAccount(provider.connection, vaultTokenAcc);
 
-    expect(account.staked).to.equal(true);
-  });
+    assert.equal(Number(afterStakeUser.amount), 0, "User should not hold NFT");
+    assert.equal(Number(vaultState.amount), 1, "Vault should hold NFT");
 
-  it("Evolves NFT (adds XP)", async () => {
+    // ---- Step 4: Unstake NFT ----
     await program.methods
-      .evolveNft()
+      .unstakeNft()
       .accounts({
-        nftAccount: nftAccount.publicKey,
-        user: user.publicKey,
+        nftAccount: nftAcc.publicKey,
+        user: wallet.publicKey,
+        userTokenAccount: userTokenAcc,
+        vaultTokenAccount: vaultTokenAcc,
+        vaultAuthority: vaultAuth,
+        tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
 
-    const account = await program.account.solfluxNft.fetch(
-      nftAccount.publicKey
-    );
-
-    expect(account.xp.toNumber()).to.equal(10);
-  });
-
-  it("Levels up after 10 evolves (100 XP)", async () => {
-    for (let i = 0; i < 9; i++) {
-      await program.methods
-        .evolveNft()
-        .accounts({
-          nftAccount: nftAccount.publicKey,
-          user: user.publicKey,
-        })
-        .rpc();
-    }
-
-    const account = await program.account.solfluxNft.fetch(
-      nftAccount.publicKey
-    );
-
-    expect(account.level).to.equal(2);
-    expect(account.xp.toNumber()).to.equal(0);
+    const finalBal = await getAccount(provider.connection, userTokenAcc);
+    assert.equal(Number(finalBal.amount), 1, "Unstake failed, NFT not returned");
   });
 });
