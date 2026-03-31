@@ -1,89 +1,95 @@
 use anchor_lang::prelude::*;
-
-declare_id!("2amQivXBjXgNUdh9VBSBtxcQnAjnZiYjf29WU9QhxJ9H");
+use anchor_spl::token::{self, Token, TokenAccount, Mint, Transfer, MintTo};
+declare_id!("G8XrUmuumW5FDEUE8k683ebhVHwy3RbhUAu3qoQoGZR");
 
 #[program]
 pub mod solflux_evolution_mvp {
     use super::*;
 
-    // --------------------------------
-    // 1️⃣ Initialize Marketplace PDA
-    // --------------------------------
     pub fn initialize_marketplace(ctx: Context<InitializeMarketplace>) -> Result<()> {
         let marketplace = &mut ctx.accounts.marketplace;
         marketplace.authority = ctx.accounts.authority.key();
         Ok(())
     }
 
-    // --------------------------------
-    // 2️⃣ Mint NFT
-    // --------------------------------
-    pub fn mint_nft(ctx: Context<MintNFT>) -> Result<()> {
-        let nft = &mut ctx.accounts.nft_account;
+    pub fn mint_nft(ctx: Context<MintNft>) -> Result<()> {
+        let bump = ctx.bumps.mint_authority;
 
-        nft.owner = ctx.accounts.user.key();
-        nft.level = 1;
-        nft.xp = 0;
-        nft.staked = false;
+        let seeds: &[&[u8]] = &[
+            b"mint",
+            &[bump],
+        ];
 
+        let signer = &[seeds];
+
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.mint.to_account_info(),
+            to: ctx.accounts.user_token_account.to_account_info(),
+            authority: ctx.accounts.mint_authority.to_account_info(),
+        };
+
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            cpi_accounts,
+            signer,
+        );
+
+        token::mint_to(cpi_ctx, 1)?;
         Ok(())
     }
 
-    // --------------------------------
-    // 3️⃣ Stake via Marketplace
-    // --------------------------------
-    pub fn stake_via_marketplace(ctx: Context<StakeViaMarketplace>) -> Result<()> {
-        let nft = &mut ctx.accounts.nft_account;
+    pub fn stake_nft(ctx: Context<StakeNft>) -> Result<()> {
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.user_token_account.to_account_info(),
+            to: ctx.accounts.vault_token_account.to_account_info(),
+            authority: ctx.accounts.user.to_account_info(),
+        };
 
-        require_keys_eq!(
-            nft.owner,
-            ctx.accounts.user.key(),
-            CustomError::InvalidOwner
+        let cpi_ctx = CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            cpi_accounts,
         );
 
-        nft.staked = true;
-
+        token::transfer(cpi_ctx, 1)?;
         Ok(())
     }
 
-    // --------------------------------
-    // 4️⃣ Evolve NFT
-    // --------------------------------
-    pub fn evolve_nft(ctx: Context<EvolveNFT>) -> Result<()> {
-        let nft = &mut ctx.accounts.nft_account;
+    pub fn unstake_nft(ctx: Context<UnstakeNft>) -> Result<()> {
+        let nft_key = ctx.accounts.nft_account.key();
 
-        require_keys_eq!(
-            nft.owner,
-            ctx.accounts.user.key(),
-            CustomError::InvalidOwner
+        let seeds: &[&[u8]] = &[
+            b"vault",
+            nft_key.as_ref(),
+            &[ctx.bumps.vault_authority],
+        ];
+
+        let signer = &[seeds];
+
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.vault_token_account.to_account_info(),
+            to: ctx.accounts.user_token_account.to_account_info(),
+            authority: ctx.accounts.vault_authority.to_account_info(),
+        };
+
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            cpi_accounts,
+            signer,
         );
 
-        require!(nft.staked, CustomError::NotStaked);
-
-        nft.xp += 10;
-
-        if nft.xp >= 100 {
-            nft.level += 1;
-            nft.xp = 0;
-        }
-
+        token::transfer(cpi_ctx, 1)?;
         Ok(())
     }
 }
 
-// =====================================================
-// Accounts
-// =====================================================
+#[account]
+pub struct Marketplace {
+    pub authority: Pubkey,
+}
 
 #[derive(Accounts)]
 pub struct InitializeMarketplace<'info> {
-    #[account(
-        init,
-        payer = authority,
-        space = 8 + 32,
-        seeds = [b"marketplace"],
-        bump
-    )]
+    #[account(init, payer = authority, space = 8 + 32)]
     pub marketplace: Account<'info, Marketplace>,
 
     #[account(mut)]
@@ -93,68 +99,70 @@ pub struct InitializeMarketplace<'info> {
 }
 
 #[derive(Accounts)]
-pub struct MintNFT<'info> {
-    #[account(
-        init,
-        payer = user,
-        space = 8 + 32 + 1 + 8 + 1
-    )]
-    pub nft_account: Account<'info, SolfluxNFT>,
+pub struct MintNft<'info> {
+    #[account(mut)]
+    pub mint: Account<'info, Mint>,
 
     #[account(mut)]
-    pub user: Signer<'info>,
+    pub user_token_account: Account<'info, TokenAccount>,
 
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct StakeViaMarketplace<'info> {
-    #[account(mut)]
-    pub nft_account: Account<'info, SolfluxNFT>,
-
+    /// CHECK: PDA
     #[account(
-        seeds = [b"marketplace"],
+        seeds = [b"mint"],
         bump
     )]
-    pub marketplace: Account<'info, Marketplace>,
+    pub mint_authority: AccountInfo<'info>,
 
+    #[account(mut)]
     pub user: Signer<'info>,
+
+    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
-pub struct EvolveNFT<'info> {
+pub struct StakeNft<'info> {
     #[account(mut)]
-    pub nft_account: Account<'info, SolfluxNFT>,
-
     pub user: Signer<'info>,
+
+    /// CHECK:
+    pub nft_account: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub user_token_account: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub vault_token_account: Account<'info, TokenAccount>,
+
+    /// CHECK: PDA
+    #[account(
+        seeds = [b"vault", nft_account.key().as_ref()],
+        bump
+    )]
+    pub vault_authority: AccountInfo<'info>,
+
+    pub token_program: Program<'info, Token>,
 }
 
-// =====================================================
-// State
-// =====================================================
+#[derive(Accounts)]
+pub struct UnstakeNft<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
 
-#[account]
-pub struct Marketplace {
-    pub authority: Pubkey,
-}
+    /// CHECK:
+    pub nft_account: AccountInfo<'info>,
 
-#[account]
-pub struct SolfluxNFT {
-    pub owner: Pubkey,
-    pub level: u8,
-    pub xp: u64,
-    pub staked: bool,
-}
+    #[account(mut)]
+    pub user_token_account: Account<'info, TokenAccount>,
 
-// =====================================================
-// Errors
-// =====================================================
+    #[account(mut)]
+    pub vault_token_account: Account<'info, TokenAccount>,
 
-#[error_code]
-pub enum CustomError {
-    #[msg("You are not the owner.")]
-    InvalidOwner,
+    /// CHECK: PDA
+    #[account(
+        seeds = [b"vault", nft_account.key().as_ref()],
+        bump
+    )]
+    pub vault_authority: AccountInfo<'info>,
 
-    #[msg("NFT must be staked.")]
-    NotStaked,
+    pub token_program: Program<'info, Token>,
 }
