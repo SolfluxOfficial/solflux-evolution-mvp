@@ -1,21 +1,21 @@
-# Solflux Evolution MVP
+# 🚀 Solflux Evolution MVP
 
-**Evolving NFT Financial Identity Protocol on Solana (Anchor-based)**
+### Evolving NFT Financial Identity Protocol on Solana (Anchor-based)
 
-Solflux transforms NFTs from static collectibles into dynamic, evolving financial identities.
+Solflux transforms NFTs from **static collectibles** into **dynamic, evolving financial identities**.
 
-This MVP demonstrates how NFTs can gain XP, level up, and evolve through marketplace-controlled staking logic — fully on-chain.
+This MVP demonstrates how NFTs can **gain XP, level up, and evolve** through marketplace-controlled staking logic — fully on-chain.
 
 ---
 
-## 🚀 MVP Features
+## ✨ MVP Features
 
-- ✅ Mint NFT (program-controlled)
-- ✅ Initialize Marketplace (PDA)
-- ✅ Stake NFT via Marketplace
-- ✅ On-chain XP accumulation
-- ✅ Automatic level-up after XP threshold
-- ✅ Anchor test coverage (all passing)
+* 🪙 **NFT Minting (Program Controlled)**
+* 🏪 **Marketplace Initialization (PDA-based)**
+* 🔒 **Stake NFTs via Marketplace**
+* 📈 **On-chain XP Accumulation**
+* ⬆️ **Automatic Level-Up after XP threshold**
+* 🧪 **Full Anchor Test Coverage (All Passing)**
 
 ---
 
@@ -23,14 +23,14 @@ This MVP demonstrates how NFTs can gain XP, level up, and evolve through marketp
 
 Traditional NFTs are static.
 
-Solflux NFTs are dynamic:
+Solflux introduces **dynamic NFTs**:
 
-- They earn XP
-- They level up
-- They evolve over time
-- They are designed to represent financial identity on-chain
+* Earn XP
+* Level up
+* Evolve over time
+* Represent on-chain financial identity
 
-This MVP introduces the foundational evolution mechanics.
+This MVP lays the foundation for **programmable identity NFTs**.
 
 ---
 
@@ -38,12 +38,14 @@ This MVP introduces the foundational evolution mechanics.
 
 Built using:
 
-- Rust
-- Anchor Framework
-- Solana
-- TypeScript (Tests)
+* **Rust**
+* **Anchor Framework**
+* **Solana**
+* **TypeScript (Tests)**
 
-### Program Structure
+---
+
+## 📁 Program Structure
 
 ```
 programs/
@@ -56,41 +58,86 @@ programs/
 
 ## ⚙️ Protocol Flow
 
-1. User mints NFT  
-2. Marketplace PDA is initialized  
-3. User stakes NFT inside marketplace  
-4. User calls `evolve()`  
-5. XP increases  
-6. After 100 XP → Level increases  
+```
+Mint NFT → Initialize Marketplace → Stake NFT → Evolve → Gain XP → Level Up
+```
+
+### Breakdown:
+
+1. User mints NFT
+2. Marketplace PDA is initialized
+3. NFT is staked into the marketplace
+4. User calls `evolve()`
+5. XP increases on-chain
+6. After 100 XP → Level increases
 
 ---
 
 ## 🧪 Test Coverage
 
-The following flows are tested:
+Fully tested flows:
 
-- Mint NFT
-- Stake NFT
-- Evolve NFT (adds XP)
-- Level up after 10 evolves (100 XP)
+* ✅ Mint NFT
+* ✅ Stake NFT
+* ✅ Evolve NFT (XP increment)
+* ✅ Level up after 10 evolves (100 XP)
 
-All tests passing ✅
+✔ All tests passing
+
+---
+
+## 🔐 Design Highlights
+
+* PDA-based marketplace authority
+* Secure token handling using SPL Token program
+* Fully on-chain state transitions
+* Non-custodial NFT control
 
 ---
 
 ## 🔮 Roadmap
 
-- Escrow-based marketplace
-- NFT trading inside protocol
-- Reward token integration
-- On-chain reputation scoring
-- DeFi composability layer
+* [ ] Escrow-based marketplace
+* [ ] NFT trading within protocol
+* [ ] Reward token integration
+* [ ] On-chain reputation scoring
+* [ ] DeFi composability layer
 
 ---
 
 ## 🌊 Vision
 
-Solflux aims to build programmable financial identities on Solana.
+Solflux aims to build **programmable financial identities on Solana**.
 
-NFTs should not just represent art 
-they should represent financial behavior, credibility, and evolution.
+NFTs should not just represent art —
+they should represent:
+
+* Financial behavior
+* Credibility
+* Evolution over time
+
+---
+
+## 📎 Repository
+
+https://github.com/SolfluxOfficial/solflux-evolution-mvp
+
+---
+
+## ⚡ Author
+
+Built by **SolfluxOfficial**
+
+---
+
+## ⭐ Support
+
+If you find this project interesting:
+
+* ⭐ Star the repo
+* 🧵 Share feedback
+* 🤝 Contribute ideas
+
+---
+
+### **Solflux — Mint. Stake. Evolve.**
